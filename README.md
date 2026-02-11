@@ -106,7 +106,20 @@ _ = svc.Run(context.Background())
 If your process has no primary HTTP server (e.g. a worker), serve admin on its own port:
 
 ```go
+// A minimal worker process: run background jobs, and expose admin on a dedicated port.
+mgr := task.NewManager()
+
+// Example background job (runs periodically).
+_ = mgr.MustAdd(task.Every(10*time.Second, func(ctx context.Context) error {
+	// ... do work ...
+	return nil
+}), task.WithName("heartbeat"))
+
 svc := zkit.NewDefaultService(zkit.ServiceSpec{
+	Tasks: &zkit.TasksSpec{
+		Manager:       mgr,
+		ExposeToAdmin: true,
+	},
 	Admin: &zkit.ServiceAdminSpec{
 		Spec: zkit.AdminSpec{
 			ReadGuard: admin.Tokens([]string{"read-token"}),
@@ -114,6 +127,77 @@ svc := zkit.NewDefaultService(zkit.ServiceSpec{
 		Server: &zkit.HTTPServerSpec{
 			Addr: ":8081",
 		},
+	},
+})
+
+_ = svc.Run(context.Background())
+```
+
+### Example: enable log level + tuning + tasks + provided snapshot
+
+This example demonstrates the opt-in “runtime control plane” capabilities on the admin surface.
+
+```go
+// ---- sources (owned by your process) ----
+var lv slog.LevelVar   // slog.LevelVar backing /log/level
+tu := tuning.New()    // runtime knobs backing /tuning/*
+mgr := task.NewManager() // background jobs backing /tasks/*
+
+// Register a runtime-tunable knob.
+_, _ = tu.Bool("feature.x", false)
+// Example runtime change (in production you may do this via the admin endpoint /tuning/set).
+_ = tu.SetFromString("feature.x", "on")
+
+// Register an on-demand job (triggerable by name).
+_ = mgr.MustAdd(
+	task.Trigger(func(ctx context.Context) error {
+		// ... do work ...
+		return nil
+	}),
+	task.WithName("rebuild-index"),
+)
+
+// ---- access control ----
+read := admin.Tokens([]string{"read-token"})   // for GET/HEAD endpoints
+writeTokens := httpx.NewAtomicTokenSet() // hot-update token set (rotate without redeploy)
+writeTokens.Update([]string{"write-token"})
+write := admin.HotTokens(writeTokens) // for POST endpoints (stronger token)
+
+// ---- business handlers ----
+mux := http.NewServeMux()
+mux.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+	_, _ = w.Write([]byte("hello"))
+})
+
+// ---- admin assembly (reads + opt-in writes + provided snapshot) ----
+adminSpec := zkit.AdminSpec{
+	ReadGuard: read,
+	Writes: &zkit.AdminWriteSpec{
+		Guard:             write,
+		EnableLogLevelSet: true,
+		Tuning: &zkit.TuningWriteSpec{Access: admin.TuningAccessSpec{
+			AllowPrefixes: []string{"feature."},
+		}},
+		Tasks: &zkit.TaskWriteSpec{Access: admin.TaskAccessSpec{
+			AllowNames: []string{"rebuild-index"},
+		}},
+	},
+}
+adminSpec.Provided.Enable = true
+adminSpec.Provided.Items = map[string]any{
+	// Common use case: publish static configuration snapshots.
+	"config": map[string]any{"env": "prod"},
+}
+
+// ---- service assembly ----
+svc := zkit.NewDefaultService(zkit.ServiceSpec{
+	Primary: &zkit.HTTPServerSpec{Addr: ":8080", Handler: mux},
+	Log:     &zkit.LogSpec{LevelVar: &lv, ExposeToAdmin: true},
+	Tuning:  &zkit.TuningSpec{Tuning: tu, ExposeToAdmin: true},
+	Tasks:   &zkit.TasksSpec{Manager: mgr, ExposeToAdmin: true},
+	Admin: &zkit.ServiceAdminSpec{
+		Spec:  adminSpec,
+		Mount: &zkit.AdminMountSpec{Prefix: "/-/"},
 	},
 })
 
