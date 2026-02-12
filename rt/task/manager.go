@@ -18,6 +18,11 @@ const (
 )
 
 // Manager coordinates tasks and their lifecycles.
+//
+// It is safe for concurrent use.
+//
+// The zero value is ready to use with default configuration.
+// To apply ManagerOption (hooks/handlers), use NewManager.
 type Manager struct {
 	state atomic.Int32 // managerState
 
@@ -82,6 +87,9 @@ func (m *Manager) Add(t Task, opts ...Option) (Handle, error) {
 
 	m.mu.Lock()
 	if c.name != "" {
+		if m.names == nil {
+			m.names = make(map[string]Handle)
+		}
 		if _, exists := m.names[c.name]; exists {
 			m.mu.Unlock()
 			return nil, fmt.Errorf("%w: %q", ErrDuplicateName, c.name)

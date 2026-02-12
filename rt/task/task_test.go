@@ -72,6 +72,21 @@ func TestAdd_Name_Duplicate_ReturnsErrDuplicateName(t *testing.T) {
 	}
 }
 
+func TestZeroValueManagerUsable_WithNamedTask(t *testing.T) {
+	t.Parallel()
+
+	var m Manager // zero value
+
+	h, err := m.Add(Trigger(func(context.Context) error { return nil }), WithName("x"))
+	if err != nil {
+		t.Fatalf("Add err=%v", err)
+	}
+
+	if got, ok := m.Lookup("x"); !ok || got != h {
+		t.Fatalf("Lookup returned ok=%v, got=%v; want ok=true, got==h", ok, got)
+	}
+}
+
 func TestLookup_EmptyOrUnnamed_ReturnsFalse(t *testing.T) {
 	t.Parallel()
 
