@@ -30,7 +30,7 @@ func TestNewDefaultAdmin_LogLevelSet_RequiresVar(t *testing.T) {
 		}
 	}()
 	_ = NewDefaultAdmin(AdminSpec{
-		ReadGuard:          AllowAll(),
+		ReadGuard:         AllowAll(),
 		WriteGuard:        AllowAll(),
 		EnableLogLevelSet: true,
 	})

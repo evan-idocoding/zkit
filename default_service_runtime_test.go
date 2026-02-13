@@ -430,4 +430,3 @@ func TestService_Run_Signal_TriggersGracefulShutdown(t *testing.T) {
 		t.Fatalf("timeout waiting for Run to return after signal")
 	}
 }
-

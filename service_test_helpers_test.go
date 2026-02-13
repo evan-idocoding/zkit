@@ -34,4 +34,3 @@ func httpGetBody(t *testing.T, url string) (code int, body string) {
 	b, _ := io.ReadAll(resp.Body)
 	return resp.StatusCode, string(b)
 }
-

@@ -604,9 +604,9 @@ func (s *Service) runSignalWatcher() (<-chan os.Signal, func()) {
 // Override & ownership rules (when both ServiceSpec.<X> and ServiceSpec.Admin.<X> are set):
 //   - Admin wiring uses Admin.<X> (Admin overrides Service-level source for the admin subtree).
 //   - Service lifecycle ownership is controlled by ServiceSpec fields:
-//       - TasksManager: when non-nil, Service starts/shuts down the task manager; when nil, Service does not manage it
-//         (even if Admin.TaskManager is set to expose tasks endpoints).
-//       - Tuning/LogLevelVar: not started/stopped by Service; they are data sources only.
+//   - TasksManager: when non-nil, Service starts/shuts down the task manager; when nil, Service does not manage it
+//     (even if Admin.TaskManager is set to expose tasks endpoints).
+//   - Tuning/LogLevelVar: not started/stopped by Service; they are data sources only.
 type ServiceSpec struct {
 	// Signals: SignalsDisable true = Run() does not listen for OS signals. Signals nil/empty = default set (SIGINT+SIGTERM on Unix).
 	SignalsDisable bool
@@ -631,15 +631,15 @@ type ServiceSpec struct {
 	AdminStandaloneServer *HTTPServerSpec
 
 	// Tasks: Manager != nil = enabled and started. ExposeToAdmin = wire into admin when admin enabled.
-	TasksManager    *task.Manager
+	TasksManager       *task.Manager
 	TasksExposeToAdmin bool
 
 	// Tuning: non-nil = enabled. ExposeToAdmin = wire into admin when admin enabled.
-	Tuning             *tuning.Tuning
+	Tuning              *tuning.Tuning
 	TuningExposeToAdmin bool
 
 	// Log: LogLevelVar != nil = enabled. ExposeToAdmin = wire into admin when admin enabled.
-	LogLevelVar     *slog.LevelVar
+	LogLevelVar      *slog.LevelVar
 	LogExposeToAdmin bool
 
 	// Lifecycle hooks and serve error observer.
@@ -674,7 +674,6 @@ type HTTPServerSpec struct {
 	Addr    string
 	Handler http.Handler
 }
-
 
 // --- helpers ---
 

@@ -79,7 +79,7 @@ type AdminSpec struct {
 	TaskReadAllowFunc     func(name string) bool
 
 	// Provided (sensitive). Non-nil = enable /provided with this map; nil = disabled.
-	ProvidedItems   map[string]any
+	ProvidedItems    map[string]any
 	ProvidedMaxBytes int // <= 0 uses ops default
 
 	// Writes: nil = no write endpoints. Non-nil = guard for all write endpoints; individual groups gated by their Enable flag and allowlists.
@@ -89,13 +89,13 @@ type AdminSpec struct {
 	EnableLogLevelSet bool
 
 	// Tuning writes: TuningWritesEnabled true = enable group (requires Tuning != nil). Allowlist applies; empty = deny-all. AllowFunc mutually exclusive with slices.
-	TuningWritesEnabled    bool
+	TuningWritesEnabled      bool
 	TuningWriteAllowPrefixes []string
 	TuningWriteAllowKeys     []string
 	TuningWriteAllowFunc     func(key string) bool
 
 	// Task writes: TaskWritesEnabled true = enable group (requires TaskManager != nil). Allowlist applies; empty = deny-all. AllowFunc mutually exclusive with slices.
-	TaskWritesEnabled    bool
+	TaskWritesEnabled      bool
 	TaskWriteAllowPrefixes []string
 	TaskWriteAllowNames    []string
 	TaskWriteAllowFunc     func(name string) bool
@@ -268,4 +268,3 @@ func tuningWritesEnabled(spec AdminSpec) bool {
 func taskWritesEnabled(spec AdminSpec) bool {
 	return spec.WriteGuard != nil && spec.TaskWritesEnabled
 }
-
