@@ -24,13 +24,11 @@
 //			Addr:    ":8080",
 //			Handler: mux,
 //		},
-//		Admin: &zkit.ServiceAdminSpec{
-//			Spec: zkit.AdminSpec{
-//				// For demos only. In production, protect admin with token/IP-based guards.
-//				ReadGuard: admin.AllowAll(),
-//			},
-//			Mount: &zkit.AdminMountSpec{Prefix: "/-/"},
+//		Admin: &zkit.AdminSpec{
+//			// For demos only. In production, protect admin with token/IP-based guards.
+//			ReadGuard: zkit.AllowAll(),
 //		},
+//		AdminMountPrefix: "/-/",
 //	})
 //
 //	_ = svc.Run(context.Background())
@@ -54,18 +52,13 @@
 //
 //   - Writes are off by default:
 //
-//   - AdminSpec.Writes == nil disables all write endpoints.
+//   - AdminSpec.WriteGuard == nil disables all write endpoints.
 //
-//   - If Writes is enabled, Writes.Guard is required (nil => panic).
-//
-//   - For tuning/tasks write groups, an allowlist is required and is fail-closed:
-//
-//   - TuningWriteSpec.Access: empty => deny all writes
-//
-//   - TaskWriteSpec.Access: empty => deny all writes
+//   - If WriteGuard is non-nil, enable write groups explicitly: EnableLogLevelSet for /log/level/set;
+//     TuningWritesEnabled / TaskWritesEnabled for tuning and task writes. Allowlist (empty = deny-all) applies for tuning/task writes.
 //
 //   - /provided (custom diagnostic snapshot) is disabled by default because it is typically more sensitive;
-//     enable it explicitly via AdminSpec.Provided.Enable.
+//     enable it explicitly by setting AdminSpec.ProvidedItems to a non-nil map.
 //
 // Tip: it is common to use separate guards for reads and writes (e.g. a read token and a stronger write token).
 //
@@ -95,7 +88,7 @@
 //   - Run: Start → wait for an exit condition (ctx.Done or OS signal) → Shutdown → Wait
 //
 // Signal handling in Run:
-//   - Enabled by default (SignalSpec.Disable=false).
+//   - Enabled by default (SignalsDisable=false).
 //   - Default signals:
 //   - Unix: SIGINT + SIGTERM
 //   - Non-Unix: os.Interrupt
@@ -110,35 +103,23 @@
 //
 // NewDefaultService can host these optional components and (optionally) expose them to admin:
 //
-//   - Tasks (ServiceSpec.Tasks):
+//   - Tasks: TasksManager!=nil = enabled and started; TasksExposeToAdmin = wire into admin when admin enabled.
 //
-//   - Enable=true and Manager=nil: create a default *task.Manager and start it in Start
+//   - Tuning: Tuning != nil = enabled; TuningExposeToAdmin = wire into admin when admin enabled.
 //
-//   - Manager!=nil: treat tasks as enabled and manage its Start/Shutdown
-//
-//   - ExposeToAdmin=true: wire tasks read endpoints into admin when admin is enabled
-//     (write endpoints are still controlled by AdminSpec.Writes)
-//
-//   - Tuning (ServiceSpec.Tuning):
-//
-//   - Enable=true and Tuning=nil: create a default *tuning.Tuning
-//
-//   - Tuning!=nil: treat tuning as enabled for wiring/admin exposure
-//
-//   - ExposeToAdmin=true: wire tuning read endpoints into admin when admin is enabled
-//     (write endpoints are still controlled by AdminSpec.Writes)
-//
-//   - Log level (ServiceSpec.Log):
-//
-//   - EnableLevelVar=true and LevelVar=nil: create a *slog.LevelVar (default level: INFO)
-//
-//   - LevelVar!=nil: treat log level as enabled
-//
-//   - ExposeToAdmin=true: wire /log/level (read), and (when enabled) /log/level/set (write)
+//   - Log: LogLevelVar!=nil = enabled; LogExposeToAdmin = wire /log/level (read) and optionally /log/level/set (write).
 //
 // Note: if admin config (especially write groups) requires a component (e.g. task writes require a task manager),
 // NewDefaultService may create the component to satisfy assembly, but write capabilities still require explicit
-// enabling via AdminSpec.Writes.
+// enabling via AdminSpec.WriteGuard and the enable flags (EnableLogLevelSet, TuningWritesEnabled, TaskWritesEnabled) plus allowlists.
+//
+// # Spec reference (parameters at a glance)
+//
+// ServiceSpec (NewDefaultService): SignalsDisable, Signals, ShutdownTimeout, Primary, Extra, Admin (*AdminSpec), AdminMountPrefix, AdminStandaloneServer, TasksManager, TasksExposeToAdmin, Tuning, TuningExposeToAdmin, LogLevelVar, LogExposeToAdmin, OnStart, OnShutdown, OnServeError.
+//
+// AdminSpec (Admin field / NewDefaultAdmin): ReadGuard (required), TrustedProxies, TrustedHeaders, ReadyChecks, LogLevelVar, Tuning, TaskManager, TuningReadAllowPrefixes/Keys/Func, TaskReadAllowPrefixes/Names/Func, ProvidedItems, ProvidedMaxBytes, WriteGuard, EnableLogLevelSet, TuningWritesEnabled, TuningWriteAllowPrefixes/Keys/Func, TaskWritesEnabled, TaskWriteAllowPrefixes/Names/Func.
+//
+// HTTPServerSpec (Primary, Extra, AdminStandaloneServer): Name, Critical, Server (or Addr+Handler).
 //
 // # Building blocks (when you need finer-grained control)
 //

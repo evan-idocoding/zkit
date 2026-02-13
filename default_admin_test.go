@@ -5,21 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/evan-idocoding/zkit/admin"
 )
 
 func TestNewDefaultAdmin_Provided_DefaultDisabled(t *testing.T) {
 	h := NewDefaultAdmin(AdminSpec{
-		ReadGuard: admin.AllowAll(),
-		Provided: struct {
-			Enable   bool
-			Items    map[string]any
-			MaxBytes int
-		}{
-			Enable: false,
-			Items:  map[string]any{"x": "y"},
-		},
+		ReadGuard: AllowAll(),
+		// ProvidedItems nil => /provided not mounted
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "http://admin.test/provided", nil)
@@ -32,18 +23,6 @@ func TestNewDefaultAdmin_Provided_DefaultDisabled(t *testing.T) {
 	}
 }
 
-func TestNewDefaultAdmin_Writes_NilGuardPanics(t *testing.T) {
-	defer func() {
-		if recover() == nil {
-			t.Fatalf("expected panic")
-		}
-	}()
-	_ = NewDefaultAdmin(AdminSpec{
-		ReadGuard: admin.AllowAll(),
-		Writes:    &AdminWriteSpec{Guard: nil},
-	})
-}
-
 func TestNewDefaultAdmin_LogLevelSet_RequiresVar(t *testing.T) {
 	defer func() {
 		if recover() == nil {
@@ -51,11 +30,9 @@ func TestNewDefaultAdmin_LogLevelSet_RequiresVar(t *testing.T) {
 		}
 	}()
 	_ = NewDefaultAdmin(AdminSpec{
-		ReadGuard: admin.AllowAll(),
-		Writes: &AdminWriteSpec{
-			Guard:             admin.AllowAll(),
-			EnableLogLevelSet: true,
-		},
+		ReadGuard:          AllowAll(),
+		WriteGuard:        AllowAll(),
+		EnableLogLevelSet: true,
 	})
 }
 
@@ -64,7 +41,7 @@ func TestNewDefaultAdmin_LogLevelGet_Works(t *testing.T) {
 	lv.Set(slog.LevelDebug)
 
 	h := NewDefaultAdmin(AdminSpec{
-		ReadGuard:   admin.AllowAll(),
+		ReadGuard:   AllowAll(),
 		LogLevelVar: &lv,
 	})
 

@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/evan-idocoding/zkit/admin"
 )
 
 func TestService_WaitBeforeStart_ErrNotStarted(t *testing.T) {
@@ -55,12 +53,10 @@ func TestNewDefaultService_AdminMount_RoutesPrefixToAdmin(t *testing.T) {
 			Addr:    "127.0.0.1:12345",
 			Handler: biz,
 		},
-		Admin: &ServiceAdminSpec{
-			Spec: AdminSpec{
-				ReadGuard: admin.AllowAll(),
-			},
-			Mount: &AdminMountSpec{Prefix: "/-/"},
+		Admin: &AdminSpec{
+			ReadGuard: AllowAll(),
 		},
+		AdminMountPrefix: "/-/",
 	})
 
 	if s.PrimaryServer == nil || s.PrimaryServer.Handler == nil {
